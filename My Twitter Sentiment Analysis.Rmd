@@ -1,0 +1,103 @@
+---
+title: "My Twitter Sentiment Analysis"
+author: "Brendan Dagys"
+date: "6/21/2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Install the necessary packages. 'syuzhet' is for sentiment analysis. 'tm' and 'SnowballC' are used for text mining and analysis.
+
+```{r}
+# install.packages('SnowballC')
+# install.packages('tm')
+# install.packages('twitteR')
+# install.packages('syuzhet')
+
+library(SnowballC)
+library(tm)
+library(twitteR)
+library(syuzhet)
+```
+
+Information obtained from the Twitter app I created, to access tweets:
+
+```{r}
+consumer_key = 'd6GKPh9ZlKV4Ykw2993HYrZij'
+consumer_secret = 'UiJnzMTF2XSOObheQhtZHpm3hIcW60fkwYSysoOKew2ZlD4e4V'
+access_token = '407474301-TzBGvNUmB7GejkwOr5KyzdC7eEV00ZREOQljuTK3'
+access_secret = 'R81TuefVAOckYPfW3rm9tPQfmukMluuo26RY2XFbgyyHm'
+```
+
+Obtaining 94 tweets from my Twitter account:
+
+```{r}
+setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
+tweets = userTimeline('BrendanDagys', n = 2000)
+
+n.tweet = length(tweets)
+
+tweets.df = twListToDF(tweets)
+```
+
+We now will remove hashtags, mentions, and URLs from the 'text' field.
+
+```{r}
+head(tweets.df$text)
+
+tweets.df2 = gsub('#\\w+', '', tweets.df$text)
+tweets.df2 = gsub('@\\w+', '', tweets.df2)
+tweets.df2 = gsub('http://[^\\s]*', '', tweets.df2)
+tweets.df2 = gsub('https://[^\\s]*', '', tweets.df2)
+tweets.df2
+```
+
+Now let's get the emotion score for each tweet.
+The 10 emotions are: anger, anticipation, disgust, fear, joy, sadness, surprise, trust, negative, positive.
+
+```{r}
+emotion.df = get_nrc_sentiment(tweets.df2)
+emotion.df2 = cbind(tweets.df2, emotion.df)
+head(emotion.df2)
+```
+
+This function gives us a numeric sentiment value. Negative values are negative sentiments.
+I will find the positive and most negative tweets.
+
+```{r}
+sentiment = get_sentiment(tweets.df2)
+
+most_pos = tweets.df2[sentiment == max(sentiment)]
+most_neg = tweets.df2[sentiment == min(sentiment)]
+
+most_pos
+```
+
+This result is interesting. Although the tweet is negative in nature, the presence of the words 'good', 'win', 'favor', and 'allow'
+likely triggered the sentiment function to evaluate this tweet as very positive.
+It will not be correct every time due to the nature of human language...
+
+```{r}
+most_neg
+
+positive_tweets = tweets.df2[sentiment > 0]
+negative_tweets = tweets.df2[sentiment < 0]
+neutral_tweets = tweets.df2[sentiment == 0]
+
+positive_tweets
+negative_tweets
+neutral_tweets
+```
+
+Let's make a table of the distribution of sentiments.
+
+```{r}
+sentiment_classes = ifelse(sentiment > 0, 'Positive', ifelse(sentiment < 0, 'Negative', 'Neutral'))
+
+table(sentiment_classes)
+```
+
+I should try to be more positive, it seems.
